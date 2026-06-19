@@ -1,53 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, ChevronRight } from 'lucide-react'
+import { ArrowRight, ShoppingBag } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
-import { getFeaturedProducts, getFlashSaleProducts } from '../lib/supabase'
+import { getProducts, getFeaturedProducts, getFlashSaleProducts } from '../lib/supabase'
 import { formatPrice } from '../data/products'
+import { useCart } from '../context/CartContext'
 
-function useCountdown(hoursFromNow = 47) {
-  const target = new Date(Date.now() + hoursFromNow * 3600 * 1000)
-  const [time, setTime] = useState({ d: 0, h: 0, m: 0, s: 0 })
-  useEffect(() => {
-    const tick = () => {
-      const diff = target - Date.now()
-      if (diff <= 0) return
-      setTime({
-        d: Math.floor(diff / 86400000),
-        h: Math.floor((diff % 86400000) / 3600000),
-        m: Math.floor((diff % 3600000) / 60000),
-        s: Math.floor((diff % 60000) / 1000),
-      })
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
-  return time
-}
-
-function CountBlock({ value, label }) {
-  return (
-    <div className="text-center">
-      <div className="font-display text-4xl sm:text-5xl font-black text-gray-900">{String(value).padStart(2, '0')}</div>
-      <div className="text-[10px] tracking-widest uppercase text-gray-400 mt-1">{label}</div>
-    </div>
-  )
-}
-
-const reviews = [
-  { name: 'Fatou K.', loc: 'Cocody, Abidjan', stars: 5, text: 'Qualité impeccable, livraison en 24h. Je recommande vivement TCHAM STORE !' },
-  { name: 'Konan A.', loc: 'Plateau, Abidjan', stars: 5, text: 'Commande via Wave, super simple. Les sneakers sont exactement comme sur les photos.' },
-  { name: 'Mariam T.', loc: 'Yopougon, Abidjan', stars: 4, text: 'Belle sélection tendance, le service client répond très vite sur WhatsApp.' },
-]
-
-const categories = [
-  { id: 'homme', label: 'Homme', icon: '👔' },
-  { id: 'femme', label: 'Femme', icon: '👗' },
-  { id: 'chaussures', label: 'Chaussures', icon: '👟' },
-  { id: 'accessoires', label: 'Accessoires', icon: '💍' },
-  { id: 'electronique', label: 'Électronique', icon: '📱' },
-]
+const EMOJIS = { homme:'👔', femme:'👗', chaussures:'👟', accessoires:'💍', electronique:'📱' }
 
 function ProductSkeleton() {
   return (
@@ -60,23 +19,128 @@ function ProductSkeleton() {
   )
 }
 
+// Spotlight — un produit en plein écran
+function Spotlight({ product, onClose }) {
+  const { addToCart } = useCart()
+  const [added, setAdded] = useState(false)
+  if (!product) return null
+
+  const emoji = EMOJIS[product.category] || '🛍️'
+  const discount = product.old_price ? Math.round((1 - product.price / product.old_price) * 100) : null
+
+  const handleAdd = () => {
+    addToCart(product, product.sizes?.[0] || 'Taille unique', product.colors?.[0] || '')
+    setAdded(true)
+    setTimeout(() => setAdded(false), 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col md:flex-row" onClick={onClose}>
+      {/* Image */}
+      <div className="flex-1 relative overflow-hidden" onClick={e => e.stopPropagation()}>
+        {product.images?.[0] ? (
+          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[120px] bg-gray-950">
+            {emoji}
+          </div>
+        )}
+        {/* Fermer */}
+        <button onClick={onClose} className="absolute top-4 right-4 w-10 h-10 bg-white/10 backdrop-blur text-white flex items-center justify-center text-xl hover:bg-white/20 transition-colors">
+          ✕
+        </button>
+      </div>
+
+      {/* Info */}
+      <div className="md:w-80 bg-white flex flex-col justify-center p-8" onClick={e => e.stopPropagation()}>
+        <p className="text-xs font-bold tracking-[0.3em] uppercase text-gray-400 mb-3">{product.category}</p>
+        <h2 className="font-display text-2xl font-black text-gray-900 mb-4 leading-tight">{product.name}</h2>
+        <p className="text-sm text-gray-500 mb-6 leading-relaxed">{product.description}</p>
+
+        <div className="flex items-center gap-3 mb-8">
+          <span className="font-display text-3xl font-black text-gray-900">{formatPrice(product.price)}</span>
+          {product.old_price && (
+            <>
+              <span className="text-gray-400 line-through text-sm">{formatPrice(product.old_price)}</span>
+              <span className="bg-gray-900 text-white text-xs font-bold px-2 py-0.5">-{discount}%</span>
+            </>
+          )}
+        </div>
+
+        <button onClick={handleAdd}
+          className={`w-full flex items-center justify-center gap-2 py-4 text-sm font-bold tracking-widest uppercase transition-colors mb-3 ${
+            added ? 'bg-green-600 text-white' : 'bg-gray-900 text-white hover:bg-gray-800'
+          }`}>
+          <ShoppingBag size={16} />
+          {added ? 'Ajouté ✓' : 'Ajouter au panier'}
+        </button>
+
+        <Link to={`/produit/${product.id}`} onClick={onClose}
+          className="w-full flex items-center justify-center gap-2 py-4 text-sm font-bold tracking-widest uppercase border border-gray-200 text-gray-700 hover:border-gray-900 transition-colors">
+          Voir le produit <ArrowRight size={16} />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// Countdown
+function useCountdown(hours = 23) {
+  const target = useRef(new Date(Date.now() + hours * 3600 * 1000))
+  const [time, setTime] = useState({ h: 0, m: 0, s: 0 })
+  useEffect(() => {
+    const tick = () => {
+      const diff = target.current - Date.now()
+      if (diff <= 0) return
+      setTime({
+        h: Math.floor((diff % 86400000) / 3600000),
+        m: Math.floor((diff % 3600000) / 60000),
+        s: Math.floor((diff % 60000) / 1000),
+      })
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+  return time
+}
+
+const reviews = [
+  { name: 'Fatou K.', loc: 'Cocody', stars: 5, text: 'Qualité impeccable, livraison en 24h !' },
+  { name: 'Konan A.', loc: 'Plateau', stars: 5, text: 'Commande via Wave, super rapide.' },
+  { name: 'Mariam T.', loc: 'Yopougon', stars: 4, text: 'Belle sélection, service client au top.' },
+]
+
 export default function HomePage() {
-  const countdown = useCountdown(47)
+  const [allProducts, setAllProducts] = useState([])
   const [featured, setFeatured] = useState([])
   const [flashSale, setFlashSale] = useState([])
   const [loading, setLoading] = useState(true)
+  const [spotlight, setSpotlight] = useState(null)
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
+  const countdown = useCountdown(23)
 
   useEffect(() => {
-    Promise.all([getFeaturedProducts(), getFlashSaleProducts()])
-      .then(([feat, flash]) => {
-        setFeatured(feat.slice(0, 6))
+    Promise.all([getProducts(), getFeaturedProducts(), getFlashSaleProducts()])
+      .then(([all, feat, flash]) => {
+        setAllProducts(all)
+        setFeatured(feat.slice(0, 4))
         setFlashSale(flash.slice(0, 4))
       })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  // Auto spotlight — affiche un produit featured toutes les 30s
+  useEffect(() => {
+    if (featured.length === 0) return
+    const id = setInterval(() => {
+      const random = featured[Math.floor(Math.random() * featured.length)]
+      setSpotlight(random)
+    }, 30000)
+    return () => clearInterval(id)
+  }, [featured])
 
   const handleSubscribe = (e) => {
     e.preventDefault()
@@ -87,51 +151,39 @@ export default function HomePage() {
 
   return (
     <div>
+      {/* SPOTLIGHT */}
+      {spotlight && <Spotlight product={spotlight} onClose={() => setSpotlight(null)} />}
+
       {/* ── HERO ── */}
-      <section className="relative min-h-[100svh] sm:min-h-[90vh] flex items-center bg-white overflow-hidden">
-        <div className="absolute right-0 top-0 w-1/2 h-full bg-stone-50 hidden md:block" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gold-100 rounded-full -translate-x-1/2 translate-y-1/2 opacity-60" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 w-full py-12 md:py-0">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <p className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 mb-6">Nouvelle Collection — 2025</p>
-              <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-black leading-[0.95] text-gray-900 mb-6">
-                STYLE<br /><span className="text-gold-400">SANS</span><br />LIMITE.
-              </h1>
-              <p className="text-gray-500 text-base leading-relaxed mb-8 max-w-sm">
-                Mode, accessoires et lifestyle pour ceux qui osent s'affirmer. Livraison rapide à Abidjan.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link to="/boutique" className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-xs font-bold tracking-widest uppercase px-8 py-4 hover:bg-gold-400 hover:text-gray-900 transition-colors duration-300">
-                  Découvrir la boutique <ArrowRight size={16} />
-                </Link>
-                <Link to="/boutique" className="inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-700 text-xs font-bold tracking-widest uppercase px-8 py-4 hover:border-gray-900 transition-colors duration-300">
-                  Ventes flash →
-                </Link>
-              </div>
-              <div className="flex gap-8 mt-12 pt-8 border-t border-gray-100">
-                {[['500+', 'Produits'], ['4.9★', 'Satisfaction'], ['24h', 'Livraison']].map(([val, lbl]) => (
-                  <div key={lbl}>
-                    <div className="font-display text-2xl font-black text-gray-900">{val}</div>
-                    <div className="text-xs text-gray-400 tracking-widest uppercase mt-0.5">{lbl}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="relative hidden md:block">
-              <div className="aspect-[4/5] bg-stone-100 flex items-center justify-center text-8xl overflow-hidden">
-                {/* Remplace ce div par : <img src="/hero.jpg" className="w-full h-full object-cover" /> */}
-                🛍️
-              </div>
-              <div className="absolute -bottom-4 -left-4 bg-white border border-gray-100 px-5 py-4 shadow-lg">
-                <p className="text-xs text-gray-400 uppercase tracking-widest">Livraison gratuite</p>
-                <p className="font-display font-bold text-gray-900 text-sm">Dès 25 000 FCFA</p>
-              </div>
-              <div className="absolute -top-4 -right-4 bg-gold-400 text-white px-5 py-4">
-                <p className="text-xs font-bold uppercase tracking-widest">Promo</p>
-                <p className="font-display font-black text-xl">–50%</p>
-              </div>
-            </div>
+      <section className="relative bg-gray-950 text-white overflow-hidden" style={{ minHeight: '70vh' }}>
+        {/* Background — première image d'un produit featured */}
+        {featured[0]?.images?.[0] && (
+          <img
+            src={featured[0].images[0]}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-40"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/80 to-transparent" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-center h-full py-20 md:py-32">
+          <p className="text-xs font-bold tracking-[0.4em] uppercase text-gray-400 mb-4">Nouvelle Collection</p>
+          <h1 className="font-display text-5xl sm:text-6xl lg:text-8xl font-black leading-none mb-6">
+            STYLE<br />SANS<br />LIMITE.
+          </h1>
+          <p className="text-gray-400 text-base max-w-sm mb-8 leading-relaxed">
+            Mode & accessoires livrés à Abidjan sous 24h.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link to="/boutique" className="inline-flex items-center justify-center gap-2 bg-white text-gray-900 text-xs font-black tracking-widest uppercase px-8 py-4 hover:bg-gray-100 transition-colors">
+              Voir la boutique <ArrowRight size={16} />
+            </Link>
+            {featured[0] && (
+              <button onClick={() => setSpotlight(featured[0])}
+                className="inline-flex items-center justify-center gap-2 border border-white/30 text-white text-xs font-bold tracking-widest uppercase px-8 py-4 hover:border-white transition-colors">
+                Coup de cœur du moment
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -139,138 +191,107 @@ export default function HomePage() {
       {/* ── TICKER ── */}
       <div className="bg-gray-900 overflow-hidden py-3 select-none">
         <div className="flex whitespace-nowrap animate-ticker">
-          {Array(4).fill(['MODE HOMME', 'MODE FEMME', 'ACCESSOIRES', 'LIVRAISON ABIDJAN', 'WAVE & ORANGE MONEY', 'NOUVEAUTÉS CHAQUE SEMAINE']).flat().map((t, i) => (
-            <span key={i} className="text-white text-[11px] font-bold tracking-[0.3em] uppercase px-10">✦ {t}</span>
+          {Array(6).fill(['LIVRAISON ABIDJAN 24H', 'WAVE & ORANGE MONEY', 'NOUVEAUTÉS', 'MODE HOMME & FEMME', 'QUALITÉ GARANTIE']).flat().map((t, i) => (
+            <span key={i} className="text-white text-[11px] font-bold tracking-[0.3em] uppercase px-8">✦ {t}</span>
           ))}
         </div>
       </div>
 
-      {/* ── AVANTAGES ── */}
-      <section className="border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { icon: '🚚', title: 'Livraison rapide', sub: 'Abidjan sous 24–48h' },
-            { icon: '💳', title: 'Paiement mobile', sub: 'Wave · Orange Money · MTN' },
-            { icon: '🔄', title: 'Retours faciles', sub: '7 jours pour changer d\'avis' },
-            { icon: '✅', title: 'Qualité garantie', sub: 'Sélection rigoureuse' },
-          ].map(({ icon, title, sub }) => (
-            <div key={title} className="flex items-start gap-3">
-              <span className="text-2xl mt-0.5">{icon}</span>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{title}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── CATÉGORIES ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="mb-8">
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 mb-1">Explorer</p>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">Nos Univers</h2>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide md:grid md:grid-cols-5 md:overflow-visible md:pb-0">
-          {categories.map((cat) => (
-            <Link key={cat.id} to={`/boutique?cat=${cat.id}`} className="flex-none w-36 md:w-auto group">
-              <div className="aspect-square bg-stone-50 rounded-sm flex items-center justify-center text-4xl group-hover:bg-gold-50 transition-colors duration-300">
-                {cat.icon}
-              </div>
-              <p className="text-xs font-bold tracking-widest uppercase text-gray-700 text-center mt-3 group-hover:text-gold-600 transition-colors">
-                {cat.label}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       {/* ── FLASH SALE ── */}
-      <section className="bg-gray-950 py-16 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
-            <div>
-              <p className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 mb-1">⚡ Offre limitée</p>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-white">Vente Flash</h2>
+      {flashSale.length > 0 && (
+        <section className="bg-gray-950 py-12 px-4 sm:px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <p className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-1">⚡ Offre limitée</p>
+                <h2 className="font-display text-2xl sm:text-3xl font-black text-white">Vente Flash</h2>
+              </div>
+              {/* Countdown */}
+              <div className="flex items-center gap-3 text-white">
+                {[
+                  [String(countdown.h).padStart(2,'0'), 'H'],
+                  [String(countdown.m).padStart(2,'0'), 'M'],
+                  [String(countdown.s).padStart(2,'0'), 'S'],
+                ].map(([val, lbl], i) => (
+                  <div key={lbl} className="flex items-center gap-3">
+                    {i > 0 && <span className="text-gray-600 font-black text-xl">:</span>}
+                    <div className="text-center">
+                      <div className="font-display text-3xl font-black">{val}</div>
+                      <div className="text-[10px] tracking-widest text-gray-500">{lbl}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <CountBlock value={countdown.d} label="Jours" />
-              <span className="font-display text-3xl text-gold-400 font-black mb-4">:</span>
-              <CountBlock value={countdown.h} label="Heures" />
-              <span className="font-display text-3xl text-gold-400 font-black mb-4">:</span>
-              <CountBlock value={countdown.m} label="Min" />
-              <span className="font-display text-3xl text-gold-400 font-black mb-4">:</span>
-              <CountBlock value={countdown.s} label="Sec" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {loading ? Array(4).fill(0).map((_,i) => <ProductSkeleton key={i} />)
+                : flashSale.map((p, i) => (
+                  <div key={p.id} onClick={() => setSpotlight(p)} className="cursor-pointer">
+                    <ProductCard product={p} index={i} />
+                  </div>
+                ))
+              }
             </div>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {loading
-              ? Array(4).fill(0).map((_, i) => <ProductSkeleton key={i} />)
-              : flashSale.length > 0
-                ? flashSale.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)
-                : <p className="col-span-4 text-center text-gray-500 py-12">Aucune vente flash en cours.</p>
-            }
-          </div>
-          <div className="text-center mt-10">
-            <Link to="/boutique" className="inline-flex items-center gap-2 border border-gold-400 text-gold-400 text-xs font-bold tracking-widest uppercase px-8 py-3 hover:bg-gold-400 hover:text-gray-900 transition-colors duration-300">
-              Voir toutes les promos <ChevronRight size={16} />
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* ── FEATURED ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="flex items-end justify-between mb-10">
+      {/* ── TOUS LES PRODUITS ── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        <div className="flex items-end justify-between mb-8">
           <div>
-            <p className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 mb-1">Cette semaine</p>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">Nos Coups de Cœur</h2>
+            <p className="text-xs font-bold tracking-[0.3em] uppercase text-gray-400 mb-1">Disponibles maintenant</p>
+            <h2 className="font-display text-2xl sm:text-3xl font-black text-gray-900">Nos Articles</h2>
           </div>
-          <Link to="/boutique" className="hidden sm:flex items-center gap-1 text-xs font-bold tracking-widest uppercase text-gray-500 hover:text-gold-600 transition-colors">
+          <Link to="/boutique" className="text-xs font-bold tracking-widest uppercase text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1">
             Tout voir <ArrowRight size={14} />
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
           {loading
-            ? Array(6).fill(0).map((_, i) => <ProductSkeleton key={i} />)
-            : featured.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)
+            ? Array(8).fill(0).map((_,i) => <ProductSkeleton key={i} />)
+            : allProducts.slice(0, 8).map((p, i) => (
+              <ProductCard key={p.id} product={p} index={i} />
+            ))
           }
         </div>
-        <div className="text-center mt-10 sm:hidden">
-          <Link to="/boutique" className="inline-flex items-center gap-2 border border-gray-200 text-gray-700 text-xs font-bold tracking-widest uppercase px-8 py-3">
-            Voir tout <ArrowRight size={14} />
-          </Link>
-        </div>
+
+        {allProducts.length > 8 && (
+          <div className="text-center mt-10">
+            <Link to="/boutique" className="inline-flex items-center gap-2 bg-gray-900 text-white text-xs font-bold tracking-widest uppercase px-8 py-4 hover:bg-gray-800 transition-colors">
+              Voir tous les articles ({allProducts.length}) <ArrowRight size={16} />
+            </Link>
+          </div>
+        )}
       </section>
 
-      {/* ── BANNER ── */}
-      <section className="bg-stone-50 py-16 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 mb-3">Exclusivité</p>
-          <h2 className="font-display text-3xl sm:text-5xl font-black text-gray-900 mb-4 leading-tight">
-            Achète 1, Obtiens 1 <span className="text-gold-400">Gratuit</span>
-          </h2>
-          <p className="text-gray-500 text-base mb-8 max-w-md mx-auto">Sur une sélection d'articles. Valable jusqu'à épuisement des stocks.</p>
-          <Link to="/boutique" className="inline-flex items-center gap-2 bg-gray-900 text-white text-xs font-bold tracking-widest uppercase px-10 py-4 hover:bg-gold-400 hover:text-gray-900 transition-colors duration-300">
-            Profiter de l'offre <ArrowRight size={16} />
-          </Link>
-        </div>
+      {/* ── BANNER PROMO ── */}
+      <section className="bg-gray-900 py-14 px-4 sm:px-6 text-center text-white">
+        <p className="text-xs font-bold tracking-[0.4em] uppercase text-gray-500 mb-3">Offre spéciale</p>
+        <h2 className="font-display text-3xl sm:text-5xl font-black mb-4 leading-tight">
+          Achète 1,<br />Obtiens 1 Gratuit
+        </h2>
+        <p className="text-gray-400 text-sm mb-8 max-w-sm mx-auto">Sur une sélection d'articles. Jusqu'à épuisement des stocks.</p>
+        <Link to="/boutique" className="inline-flex items-center gap-2 bg-white text-gray-900 text-xs font-black tracking-widest uppercase px-8 py-4 hover:bg-gray-100 transition-colors">
+          En profiter <ArrowRight size={16} />
+        </Link>
       </section>
 
       {/* ── AVIS ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="text-center mb-10">
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 mb-1">Témoignages</p>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">Ce qu'ils disent</h2>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        <div className="text-center mb-8">
+          <p className="text-xs font-bold tracking-[0.3em] uppercase text-gray-400 mb-1">Témoignages</p>
+          <h2 className="font-display text-2xl sm:text-3xl font-black text-gray-900">Ce qu'ils disent</h2>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-4">
           {reviews.map(({ name, loc, stars, text }) => (
             <div key={name} className="border border-gray-100 p-6">
-              <div className="text-gold-400 text-sm mb-3">{'★'.repeat(stars)}{'☆'.repeat(5 - stars)}</div>
+              <div className="text-gray-900 text-sm mb-3">{'★'.repeat(stars)}{'☆'.repeat(5-stars)}</div>
               <p className="text-gray-600 text-sm leading-relaxed italic mb-4">"{text}"</p>
               <div>
                 <p className="font-semibold text-sm text-gray-900">{name}</p>
-                <p className="text-xs text-gray-400">{loc}</p>
+                <p className="text-xs text-gray-400">{loc}, Abidjan</p>
               </div>
             </div>
           ))}
@@ -278,23 +299,23 @@ export default function HomePage() {
       </section>
 
       {/* ── NEWSLETTER ── */}
-      <section className="bg-gray-900 py-16 px-4 sm:px-6">
+      <section className="bg-gray-950 py-14 px-4 sm:px-6">
         <div className="max-w-xl mx-auto text-center">
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 mb-3">Newsletter</p>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-3">Restez dans la Tendance</h2>
-          <p className="text-gray-400 text-sm mb-8">Inscrivez-vous et obtenez <span className="text-gold-400 font-bold">–10%</span> sur votre première commande.</p>
+          <p className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-3">Newsletter</p>
+          <h2 className="font-display text-2xl sm:text-3xl font-black text-white mb-3">–10% sur votre 1ère commande</h2>
+          <p className="text-gray-500 text-sm mb-6">Inscrivez-vous et recevez votre code promo.</p>
           {subscribed ? (
-            <p className="text-green-400 font-semibold">✅ Merci ! Votre code –10% a été envoyé.</p>
+            <p className="text-green-400 font-semibold">✅ Merci ! Votre code vous a été envoyé.</p>
           ) : (
             <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Votre adresse email…"
-                className="flex-1 bg-gray-800 text-white placeholder-gray-500 px-4 py-3 text-sm border border-gray-700 focus:outline-none focus:border-gold-400" required />
-              <button type="submit" className="bg-gold-400 text-gray-900 text-xs font-bold tracking-widest uppercase px-6 py-3 hover:bg-gold-200 transition-colors whitespace-nowrap">
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="Votre email…" required
+                className="flex-1 bg-gray-900 text-white placeholder-gray-600 px-4 py-3 text-sm border border-gray-800 focus:outline-none focus:border-gray-500" />
+              <button type="submit" className="bg-white text-gray-900 text-xs font-black tracking-widest uppercase px-6 py-3 hover:bg-gray-100 transition-colors whitespace-nowrap">
                 S'inscrire
               </button>
             </form>
           )}
-          <p className="text-gray-600 text-xs mt-4">Pas de spam. Désinscription à tout moment.</p>
         </div>
       </section>
     </div>

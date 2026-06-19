@@ -15,9 +15,7 @@ export default function Navbar() {
   const { count } = useCart()
   const location = useLocation()
 
-  useEffect(() => {
-    setOpen(false)
-  }, [location])
+  useEffect(() => { setOpen(false) }, [location])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -28,59 +26,43 @@ export default function Navbar() {
   return (
     <>
       {/* Promo bar */}
-      <div className="bg-gray-900 text-white text-center py-2 text-xs tracking-widest font-medium overflow-hidden">
-        <span className="inline-block animate-pulse">
-          ✦ LIVRAISON ABIDJAN &amp; ENVIRONS · PAIEMENT WAVE · ORANGE MONEY · MTN MOMO ✦
-        </span>
+      <div className="bg-gray-900 text-white text-center py-2 text-xs tracking-widest font-medium">
+        ✦ LIVRAISON ABIDJAN 24H · WAVE · ORANGE MONEY · MTN MOMO ✦
       </div>
 
       {/* Navbar */}
       <nav className={`sticky top-0 z-50 bg-white transition-shadow duration-300 ${scrolled ? 'shadow-md' : 'border-b border-gray-100'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
           <Link to="/" className="font-display text-2xl font-black tracking-widest text-gray-900">
-            TCHAM<span className="text-gold-400">.</span>
+            TCHAM<span className="text-gray-900">.</span>
           </Link>
 
-          {/* Desktop links */}
           <ul className="hidden md:flex items-center gap-8">
             {links.map(({ to, label }) => (
               <li key={to}>
-                <NavLink
-                  to={to}
-                  end={to === '/'}
+                <NavLink to={to} end={to === '/'}
                   className={({ isActive }) =>
                     `text-xs font-semibold tracking-widest uppercase transition-colors duration-200 ${
-                      isActive ? 'text-gold-400' : 'text-gray-700 hover:text-gray-900'
+                      isActive ? 'text-gray-900 border-b-2 border-gray-900 pb-0.5' : 'text-gray-500 hover:text-gray-900'
                     }`
-                  }
-                >
+                  }>
                   {label}
                 </NavLink>
               </li>
             ))}
           </ul>
 
-          {/* Right icons */}
           <div className="flex items-center gap-4">
-            <button className="text-gray-600 hover:text-gray-900 transition-colors hidden md:block" aria-label="Rechercher">
-              <Search size={20} />
-            </button>
-
             <Link to="/panier" className="relative text-gray-700 hover:text-gray-900 transition-colors" aria-label="Panier">
               <ShoppingBag size={22} />
               {count > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gold-400 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-gray-900 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                   {count}
                 </span>
               )}
             </Link>
 
-            <button
-              className="md:hidden text-gray-700 hover:text-gray-900 transition-colors"
-              onClick={() => setOpen(!open)}
-              aria-label="Menu"
-            >
+            <button className="md:hidden text-gray-700 hover:text-gray-900 transition-colors" onClick={() => setOpen(!open)}>
               {open ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
@@ -92,15 +74,12 @@ export default function Navbar() {
             <ul className="flex flex-col gap-1">
               {links.map(({ to, label }) => (
                 <li key={to}>
-                  <NavLink
-                    to={to}
-                    end={to === '/'}
+                  <NavLink to={to} end={to === '/'}
                     className={({ isActive }) =>
-                      `block py-3 text-sm font-semibold tracking-widest uppercase border-b border-gray-50 transition-colors ${
-                        isActive ? 'text-gold-400' : 'text-gray-700'
+                      `block py-3 text-sm font-semibold tracking-widest uppercase border-b border-gray-50 ${
+                        isActive ? 'text-gray-900' : 'text-gray-500'
                       }`
-                    }
-                  >
+                    }>
                     {label}
                   </NavLink>
                 </li>
