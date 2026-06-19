@@ -88,10 +88,10 @@ export default function HomePage() {
   return (
     <div>
       {/* ── HERO ── */}
-      <section className="relative min-h-[90vh] flex items-center bg-white overflow-hidden">
+      <section className="relative min-h-[100svh] sm:min-h-[90vh] flex items-center bg-white overflow-hidden">
         <div className="absolute right-0 top-0 w-1/2 h-full bg-stone-50 hidden md:block" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-gold-100 rounded-full -translate-x-1/2 translate-y-1/2 opacity-60" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 w-full py-20 md:py-0">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 w-full py-12 md:py-0">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <p className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 mb-6">Nouvelle Collection — 2025</p>
