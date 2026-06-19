@@ -7,7 +7,7 @@ import { formatPrice } from '../data/products'
 import ProductCard from '../components/ProductCard'
 
 const EMOJIS = { homme:'👔', femme:'👗', chaussures:'👟', accessoires:'💍', electronique:'📱' }
-const WHATSAPP = '225XXXXXXXXX'
+const WHATSAPP = '22507984705170'
 
 export default function ProductPage() {
   const { id } = useParams()

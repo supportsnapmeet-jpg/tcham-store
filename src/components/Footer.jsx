@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Share2, MessageCircle, Globe, Play } from 'lucide-react'
 
-const WHATSAPP = '225XXXXXXXXX'
+const WHATSAPP = '22507984705170'
 
 export default function Footer() {
   return (

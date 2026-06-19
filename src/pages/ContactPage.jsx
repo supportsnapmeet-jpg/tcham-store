@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MapPin, Phone, Mail, Clock, MessageCircle } from 'lucide-react'
 
-const WHATSAPP = '225XXXXXXXXX'
+const WHATSAPP = '22507984705170'
 
 export default function ContactPage() {
   const [form, setForm] = useState({ nom: '', email: '', sujet: '', message: '' })

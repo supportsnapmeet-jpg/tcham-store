@@ -4,7 +4,7 @@ import { Trash2, Minus, Plus, ShoppingBag, MessageCircle, ArrowLeft } from 'luci
 import { useCart } from '../context/CartContext'
 import { formatPrice } from '../data/products'
 
-const WHATSAPP = '225XXXXXXXXX'
+const WHATSAPP = '22507984705170'
 
 export default function CartPage() {
   const { items, total, removeItem, updateQty, clearCart, buildWhatsAppMessage } = useCart()
